@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -140,7 +140,9 @@ namespace NoodledEvents
                 if (Bowl.Event.PersistentCallsList == null) Bowl.Event.FSetPCalls(new List<PersistentCall>());
                 Bowl.Event.PersistentCallsList.Clear();
                 var targNode = FlowOutputs.FirstOrDefault()?.Target?.Node; // this also handles the descending nodes
-                targNode?.Book.CompileNode(Bowl.Event, targNode, dataRoot);
+                //targNode?.Book.CompileNode(Bowl.Event, targNode, dataRoot); // This should be handled via the stupid constructor now
+                targNode?.compileAction.Invoke(Bowl.Event, targNode, dataRoot);
+
                 // all the comp happens through Book.CompileNode calling more of itself
 
                 // we also need to account for nodes with inputs of "System.Type"
@@ -171,6 +173,9 @@ namespace NoodledEvents
         }
         public CookBook Book;
         public string BookTag; // identifies the node within the book
+
+        public Action<UltEventBase, SerializedNode, Transform> compileAction;
+
         public void OnBeforeSerialize() // also called by validate for sanity lol
         {
             // save the connections GUIDs for load
