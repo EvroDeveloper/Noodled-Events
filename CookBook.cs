@@ -202,7 +202,7 @@ namespace NoodledEvents
                 CookBook = book; Name = name; Inputs = inputs?.Invoke() ?? new Pin[0]; Outputs = outputs?.Invoke() ?? new Pin[0];
                 createSearchItem = searchItem;
             }
-            public NodeDef(CookBook book, string name, Func<Pin[]> inputs, Func<Pin[]> outputs, string bookTag = "", string searchTextOverride = "", string tooltipOverride = "") : this(book, name, inputs, outputs, (def) => 
+            public NodeDef(CookBook book, string name, Func<Pin[]> inputs, Func<Pin[]> outputs, string bookTag = "", Action<UltEventBase, SerializedNode, Transform> compileAction = null, string searchTextOverride = "", string tooltipOverride = "") : this(book, name, inputs, outputs, (def) => 
                 {
                     var o = new UnityEngine.UIElements.Button(() =>
                     {
@@ -210,6 +210,10 @@ namespace NoodledEvents
                         var nod = UltNoodleEditor.NewNodeBowl.AddNode(def.Name, book).MatchDef(def);
 
                         nod.BookTag = def.BookTag != string.Empty ? def.BookTag : def.Name;
+                        nod.compileAction = (u, s, t) => {
+                            book?.CompileNode(u, s, t);
+                        };
+                        nod.compileAction += compileAction;
 
                         nod.Position = UltNoodleEditor.NewNodePos;
                         UltNoodleEditor.NewNodeBowl.Validate();
@@ -226,6 +230,7 @@ namespace NoodledEvents
             public string BookTag;
             public Func<SerializedNode> CreateNode;
             private Func<NodeDef, Button> createSearchItem;
+            private Action<UltEventBase, SerializedNode, Transform> compileAction;
             public Button SearchItem => _searchItem ??= createSearchItem.Invoke(this);
             private Button _searchItem;
 
