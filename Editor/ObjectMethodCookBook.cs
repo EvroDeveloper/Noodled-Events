@@ -99,6 +99,7 @@ public class ObjectMethodCookBook : CookBook
 
     public override void CompileNode(UltEventBase evt, SerializedNode node, Transform dataRoot)
     {
+        base.CompileNode(evt, node, dataRoot);
         // sanity check (AddComponent() leaves this field empty)
         if (evt.PersistentCallsList == null) evt.FSetPCalls(new());
 
@@ -434,11 +435,11 @@ public class ObjectMethodCookBook : CookBook
 
                 evt.PersistentCallsList.Add(editorSetCall);
 
-                var ingameSetCall = new PersistentCall();
+                /*var ingameSetCall = new PersistentCall();
                 ingameSetCall.CopyFrom(editorSetCall);
                 ingameSetCall.FSetMethodName("System.Linq.Expressions.Interpreter.CallInstruction, System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e.ArrayItemSetter1");
                 ingameSetCall.FSetMethod(null);
-                evt.PersistentCallsList.Add(ingameSetCall);
+                evt.PersistentCallsList.Add(ingameSetCall);*/
             }
             // paramArr is now full of data;
             // invoke the method upon the target.

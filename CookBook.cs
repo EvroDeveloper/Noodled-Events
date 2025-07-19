@@ -1,11 +1,13 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.Drawing.Printing;
 using System.Linq;
 using System.Reflection;
 using TMPro;
 using UltEvents;
 using UnityEngine;
+using UnityEngine.Animations;
 using UnityEngine.UIElements;
 
 namespace NoodledEvents
@@ -41,9 +43,15 @@ namespace NoodledEvents
         {
             
         }
+
+        private static SerializedNode lastCompiledNode;
         public virtual void CompileNode(UltEventBase evt, SerializedNode node, Transform dataRoot)
         {
             // when a bowl is compiled, it puts forward an evt that is filled by compiled nodes.
+            // this func handles it
+            // method overrides of this func should also call base.CompileNode(evt, node, dataRoot);
+            // so that errors can be displayed on the node
+            node.Bowl.ErroredNode = node;
         }
         public virtual void PostCompile(SerializedBowl bowl)
         {
@@ -68,6 +76,16 @@ namespace NoodledEvents
                 if (oldNode.FlowOutputs[0].Target != null)
                     newNode.FlowOutputs[0].Connect(oldNode.FlowOutputs[0].Target);
         }
+
+        public static PersistentCall MakeCall<T>(string method, params Type[] ts)
+            => new PersistentCall(typeof(T).GetMethod(method, UltEventUtils.AnyAccessBindings, null, ts, null), null);
+        public static PersistentCall MakeCall(Type t, string method, params Type[] ts)
+            => new PersistentCall(t.GetMethod(method, UltEventUtils.AnyAccessBindings, null, ts, null), null);
+        public static PersistentCall MakeCall<T>(string method, UnityEngine.Object obj = null, params Type[] ts)
+            => new PersistentCall(typeof(T).GetMethod(method, UltEventUtils.AnyAccessBindings, null, ts, null), obj);
+        public static PersistentCall MakeCall<T>(string method, UnityEngine.Object obj = null)
+            => new PersistentCall(typeof(T).GetMethod(method, UltEventUtils.AnyAccessBindings), obj);
+
         public class PendingConnection // utility class to link pcalls, with support for cross-event data transfer
         { 
             /// <summary>
@@ -81,9 +99,12 @@ namespace NoodledEvents
             { 
                 SourceEvent = o.CompEvt; SourceCall = o.CompCall;
                 TargEvent = targEvt; TargCall = targCall;
-                TargArgType = targCall.Method.GetParameters()[argIdx].ParameterType; TargInput = argIdx;
+                TargInwardType = targCall.Method.GetParameters()[argIdx].ParameterType; TargInput = argIdx;
+                SourceOutwardType = o.Type.Type;
                 if (o.Node.NoadType == SerializedNode.NodeType.BowlInOut)
                     ArgIsSource = Array.IndexOf(o.Node.DataOutputs, o);
+                else if (o.UseCompAsParam)
+                    ArgIsSource = o.CompAsParam;
                 else ArgIsSource = -1;
             }
 
@@ -91,10 +112,10 @@ namespace NoodledEvents
             public static Dictionary<Type, (Type, PropertyInfo)> CompStoragers = new Dictionary<Type, (Type, PropertyInfo)>()
             {
                 { typeof(UnityEngine.Object), (GetExtType("XRInteractorAffordanceStateProvider", XRAssembly), GetExtType("XRInteractorAffordanceStateProvider", XRAssembly).GetProperty("interactorSource", UltEventUtils.AnyAccessBindings)) },
-                { typeof(float), (typeof(SphereCollider), RadiusGetSet) },
+                { typeof(float), (typeof(UnityEngine.UI.AspectRatioFitter), RatioGetSet) },
                 { typeof(Material[]), (typeof(MeshRenderer), typeof(MeshRenderer).GetProperty("sharedMaterials", UltEventUtils.AnyAccessBindings)) },
                 { typeof(bool), (typeof(UnityEngine.UI.Mask), typeof(UnityEngine.UI.Mask).GetProperty("enabled")) },
-                { typeof(Vector3), (typeof(BoxCollider), typeof(BoxCollider).GetProperty(nameof(BoxCollider.center))) },
+                { typeof(Vector3), (typeof(PositionConstraint), typeof(PositionConstraint).GetProperty(nameof(PositionConstraint.translationOffset))) },
                 { typeof(string), (typeof(TextMeshPro), typeof(TMP_Text).GetProperty("text", UltEventUtils.AnyAccessBindings)) },
                 { typeof(int), (typeof(LineRenderer), typeof(LineRenderer).GetProperty("numCapVertices", UltEventUtils.AnyAccessBindings)) }
             };
@@ -118,16 +139,17 @@ namespace NoodledEvents
 
             public UltEventBase TargEvent;
             public PersistentCall TargCall;
-            public Type TargArgType;
+            public Type TargInwardType;
+            public Type SourceOutwardType;
             public int TargInput; // the idx of the arg on the TargCall to set as Arg
             public void Connect(Transform dataRoot) // fyi this is called while the targcall is being constructed
             {
                 if (SourceEvent == TargEvent) // same evt connection
                 {
                     if (ArgIsSource > -1)
-                        TargCall.PersistentArguments[TargInput] = new PersistentArgument().ToParamVal(ArgIsSource, TargArgType);
+                        TargCall.PersistentArguments[TargInput] = new PersistentArgument().ToParamVal(ArgIsSource, TargInwardType);
                     else
-                        TargCall.PersistentArguments[TargInput] = new PersistentArgument().ToRetVal(SourceEvent.PersistentCallsList.IndexOf(SourceCall), TargArgType);
+                        TargCall.PersistentArguments[TargInput] = new PersistentArgument().ToRetVal(SourceEvent.PersistentCallsList.IndexOf(SourceCall), TargInwardType);
                 }
                 else
                 {
@@ -138,17 +160,9 @@ namespace NoodledEvents
                     // all the other types (int, float, color, bool) are todo.
 
                         
-                    Type transferredType = TargArgType;
-                    if (ArgIsSource == -1)
-                    {
-                        if (SourceCall.Method.GetReturnType().IsSubclassOf(TargArgType))
-                            transferredType = SourceCall.Method.GetReturnType();
-                    } else
-                    {
-                        Type evtT = SourceEvent.GetType().GetEvtGenerics()[ArgIsSource]; 
-                        if (evtT.IsSubclassOf(TargArgType))
-                            transferredType = evtT;
-                    }
+                    Type transferredType = TargInwardType;
+                    if (transferredType.IsAssignableFrom(SourceOutwardType))
+                        transferredType = SourceOutwardType;
 
                     foreach (var kvp in CompStoragers)
                     {
@@ -183,17 +197,18 @@ namespace NoodledEvents
                         TargEvent.PersistentCallsList.Add(getPCall);
 
                         // make targcall ref the gotten value (remember, targcall is under construction rn so its gonna be added last)
-                        TargCall.PersistentArguments[TargInput] = new PersistentArgument().ToRetVal(TargEvent.PersistentCallsList.Count - 1, TargArgType);
+                        TargCall.PersistentArguments[TargInput] = new PersistentArgument().ToRetVal(TargEvent.PersistentCallsList.Count - 1, TargInwardType);
 
                         return;
                     }
 
                     // fail
-                    Debug.Log("failed data transfer for " + TargArgType);
+                    Debug.Log("failed data transfer for " + TargInwardType);
                     
                 }
             }
-            private static PropertyInfo RadiusGetSet => typeof(SphereCollider).GetProperty(nameof(SphereCollider.radius), UltEventUtils.AnyAccessBindings);
+            private static PropertyInfo RatioGetSet => typeof(UnityEngine.UI.AspectRatioFitter)
+                .GetProperty(nameof(UnityEngine.UI.AspectRatioFitter.aspectRatio), UltEventUtils.AnyAccessBindings);
         }
         public class NodeDef
         {
@@ -226,7 +241,17 @@ namespace NoodledEvents
             public string BookTag;
             public Func<SerializedNode> CreateNode;
             private Func<NodeDef, Button> createSearchItem;
-            public Button SearchItem => _searchItem ??= createSearchItem.Invoke(this);
+            public Button SearchItem
+            {
+                get
+                {
+                    if (_searchItem == null) 
+                    {
+                        _searchItem = createSearchItem.Invoke(this);
+                        _searchItem.style.unityTextAlign = TextAnchor.MiddleLeft;
+                    } return _searchItem;
+                }
+            }
             private Button _searchItem;
 
             public class Pin
