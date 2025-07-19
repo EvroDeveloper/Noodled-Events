@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace NoodledEvents
 {
-    [InitializeOnLoad]
+    //[InitializeOnLoad]
     static class EnsureXRPackage
     {
         private static Dictionary<Type, List<FieldInfo>> TypeToUltFields = new();
