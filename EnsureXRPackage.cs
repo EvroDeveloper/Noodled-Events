@@ -12,14 +12,14 @@ using UnityEngine;
 
 namespace NoodledEvents
 {
-    //[InitializeOnLoad]
+    [InitializeOnLoad]
     static class EnsureXRPackage
     {
         private static Dictionary<Type, List<FieldInfo>> TypeToUltFields = new();
         static EnsureXRPackage()
         {
             // Soft Dependancies
-            Client.AddAndRemove(new string[] { "https://github.com/holadivinus/BLXRComp.git", "https://github.com/holadivinus/MarrowBuildHook.git" }, null);
+            //Client.AddAndRemove(new string[] { "https://github.com/holadivinus/BLXRComp.git", "https://github.com/holadivinus/MarrowBuildHook.git" }, null);
 
 
             // also fix up MathUtilities.cs
