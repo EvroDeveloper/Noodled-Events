@@ -12,8 +12,10 @@ using static NoodledEvents.CookBook.NodeDef;
 
 public class CommonsCookBook : CookBook
 {
-    public override void CollectDefs(List<NodeDef> allDefs)
+    public override void CollectDefs(Action<IEnumerable<NodeDef>, float> progressCallback, Action completedCallback)
     {
+        List<NodeDef> allDefs = new();
+
         // flow.if
         allDefs.Add(new NodeDef(this, "flow.if", 
             inputs:() => new[] { new Pin("Exec"), new Pin("condition", typeof(bool)) },
@@ -152,6 +154,9 @@ public class CommonsCookBook : CookBook
             inputs: () => new[] { new Pin("Fetch"), new Pin("DelegateID", typeof(string)) },
             outputs: () => new[] { new Pin("Fetched"), new Pin("Delegate", typeof(Delegate)) },
             bookTag: "fetch_delegate"));
+
+        progressCallback.Invoke(allDefs, 1);
+        completedCallback.Invoke();
     }
 
     const string dictStoreTypeStr = "System.TimeZone, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
@@ -288,8 +293,9 @@ public class CommonsCookBook : CookBook
                     // embedded mode:
                     if (node.DataInputs.Length == 2 && node.DataInputs[1].DefaultBoolValue)
                     {
-                        // is embedded
-                        var asyncEvt = dataRoot.StoreComp<DelayedUltEventHolder>("Embedded Async Event");
+                        // is embedded - place at root
+                        
+                        var asyncEvt = node.Bowl.LastGenerated.transform.StoreComp<DelayedUltEventHolder>("Embedded Async Event");
                         asyncEvt.gameObject.SetActive(true);
 
                         if (node.DataInputs[0].Source == null) asyncEvt.Delay = node.DataInputs[0].DefaultFloatValue;

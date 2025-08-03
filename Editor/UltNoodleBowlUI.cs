@@ -66,8 +66,12 @@ public class UltNoodleBowlUI : VisualElement
                     @do.Connect(CurHoveredDataInput); // this is the one
                     return;
                 }
-            Editor.SetSearchFilter(pinIn: false, CurHoveredDataInput.Type);
-            Editor.OpenSearchMenu();
+
+            if (CurHoveredDataInput.Type.IsValid())
+            {
+                Editor.SetSearchFilter(pinIn: false, CurHoveredDataInput.Type);
+                Editor.OpenSearchMenu();
+            }
         }
         else if (CurHoveredDataOutput != null)
         {
@@ -78,8 +82,12 @@ public class UltNoodleBowlUI : VisualElement
                     di.Connect(CurHoveredDataOutput); // this is the one
                     return;
                 }
-            Editor.SetSearchFilter(pinIn: true, CurHoveredDataOutput.Type);
-            Editor.OpenSearchMenu();
+
+            if (CurHoveredDataOutput.Type.IsValid())
+            {
+                Editor.SetSearchFilter(pinIn: true, CurHoveredDataOutput.Type);
+                Editor.OpenSearchMenu();
+            }
         }
 
         // ho ho ho :)
@@ -317,6 +325,11 @@ public class UltNoodleBowlUI : VisualElement
         } else
         {
             VarMans = SerializedData.GetComponentsInParent<VarMan>(true);
+            if (VarMans.Any(v => v.HideBowls))
+            {
+                Visual?.parent?.Remove(Visual);
+                Editor.BowlUIs.Remove(this);
+            }
             VarManVars = VarMans.SelectMany(vm => vm.Vars).ToArray();
         }
         foreach (var nodeUI in NodeUIs.ToArray()) // validate my nodeUIs
