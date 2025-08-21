@@ -45,6 +45,17 @@ public class CustomNodesCookBook : CookBook
     public override void CompileNode(UltEventBase evt, SerializedNode node, Transform dataRoot)
     {
         base.CompileNode(evt, node, dataRoot);
+
+        CustomNodeDef targetNode = bookTagToNodeDef[node.BookTag];
+
+        foreach(var call in targetNode.persistentCalls)
+        {
+            
+        }
+
+        var nextNode = node.FlowOutputs[0].Target?.Node;
+        if (nextNode != null)
+            nextNode.Book.CompileNode(evt, nextNode, dataRoot);
     }
 }
 #endif

@@ -13,8 +13,10 @@ public class CustomNodeDef : ScriptableObject
 {
     public string nodeName;
     public string bookTag;
-    public SerializablePinData[] inputPins;
-    public SerializablePinData[] outputPins;
+    public SerializablePinData[] inputPins = new[] { new SerializablePinData() { pinName = "Exec" } };
+    public SerializablePinData[] outputPins = new[] { new SerializablePinData() { pinName = "Done" } };
+
+    public SerializablePersistentCallExt[] persistentCalls;
 
     public Pin[] GetInputPins()
     {
@@ -45,9 +47,10 @@ public struct SerializablePinData
         Flow,
         Object,
     }
-    public string pinName;
+    public string pinName = New Pin;
     public PinType pinType;
     public string objectType;
+    public int persistentCallForReturn = 0;
 
     public Pin ToPin()
     {
@@ -58,6 +61,7 @@ public struct SerializablePinData
         else if (pinType == PinType.Object)
         {
             Type pinObjType = Type.GetType(objectType);
+            Debug.Log(pinObjType == null);
             return new Pin(pinName, pinObjType);
         }
         return null;
@@ -65,8 +69,44 @@ public struct SerializablePinData
 }
 
 [Serializable]
-public struct SerializablePersistentCallSetup
+public struct SerializablePersistentCallExt
 {
+    public UnityEngine.Object target;
+    public string methodName;
+    public SerializablePersistentArgumentExt[] persistentArguments;
+}
 
+[Serializable]
+public struct SerializablePersistentArgumentExt
+{
+    public enum PersistentArgumentTypeExt
+    {
+        None,
+        Bool,
+        String,
+        Int,
+        Enum,
+        Float,
+        Vector2,
+        Vector3,
+        Vector4,
+        Quaternion,
+        Color,
+        Color32,
+        Rect,
+        Object,
+        Parameter,
+        ReturnValue,
+        NodeParameter
+    }
+
+    public PersistentArgumentTypeExt Type;
+    public int _Int;
+    public string _String;
+    public float _X;
+    public float _Y;
+    public float _Z;
+    public float _W;
+    public UnityEngine.Object _Object;
 }
 #endif
