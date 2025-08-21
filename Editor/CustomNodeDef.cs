@@ -11,6 +11,7 @@ using static NoodledEvents.CookBook.NodeDef.Pin;
 [CreateAssetMenu(fileName = "New Custom Node", menuName = "NoodleEvents/Custom Node", order = 1)]
 public class CustomNodeDef : ScriptableObject
 {
+    public string namespace = "custom";
     public string nodeName;
     public string bookTag;
     public SerializablePinData[] inputPins = new[] { new SerializablePinData() { pinName = "Exec" } };
@@ -36,6 +37,31 @@ public class CustomNodeDef : ScriptableObject
             output.Add(pin.ToPin());
         }
         return output.ToArray();
+    }
+
+    public SerializablePinData[] GetDataOutputs()
+    {
+        List<SerializablePinData> output = new();
+        foreach(SerializablePinData pin in outputPins)
+        {
+            if(pin.pinType == PinType.Object)
+            {
+                output.Add(pin);
+            }
+        }
+        return output;
+    }
+
+    void OnValidate()
+    {
+        foreach(var pin in inputPins)
+        {
+            pin.FixType()
+        }
+        foreach(var pin2 in outputPins)
+        {
+            pin2.FixType()
+        }
     }
 }
 
@@ -66,12 +92,38 @@ public struct SerializablePinData
         }
         return null;
     }
+
+    public void FixType()
+    {
+        if(pinType == PinType.Flow) return;
+
+        objectType = objectType.Trim();
+        if (TypeTranslator.SimpleNames2Types.TryGetValue(objectType.ToLower(), out Type v))
+        {
+            objectType = string.Join(',', v.AssemblyQualifiedName.Split(',').Take(2));
+            return;
+        }
+        foreach (Type t in UltNoodleEditor.SearchableTypes)
+        {
+            if (string.Compare(t.Name, tf.value, StringComparison.CurrentCultureIgnoreCase) == 0)
+            {
+                objectType = string.Join(',', t.AssemblyQualifiedName.Split(',').Take(2));
+                return;
+            }
+        }
+    }
 }
 
 [Serializable]
 public struct SerializablePersistentCallExt
 {
-    public UnityEngine.Object target;
+    // public enum PeristentCallTargetType
+    // {
+    //     None,
+    //     NodeInput
+    // }
+    // public PeristentCallTargetType target;
+    // public int targetParameterIndex;
     public string methodName;
     public SerializablePersistentArgumentExt[] persistentArguments;
 }
