@@ -2,8 +2,11 @@
 using System;
 using NoodledEvents;
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEditor;
 using static NoodledEvents.CookBook.NodeDef;
+using static NoodledEvents.CookBook.NodeDef.Pin;
 
 [CreateAssetMenu(fileName = "New Custom Node", menuName = "NoodleEvents/Custom Node", order = 1)]
 public class CustomNodeDef : ScriptableObject
@@ -57,6 +60,7 @@ public struct SerializablePinData
             Type pinObjType = Type.GetType(objectType);
             return new Pin(pinName, pinObjType);
         }
+        return null;
     }
 }
 
