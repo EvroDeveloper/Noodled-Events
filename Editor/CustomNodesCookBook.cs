@@ -7,7 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using static NoodledEvents.CookBook.NodeDef;
-using static SerializablePersistentArgumentExt.PersistentArgumentTypeExt;
+using static SerializablePersistentArgumentExt;
 
 public class CustomNodesCookBook : CookBook
 {
@@ -92,7 +92,7 @@ public class CustomNodesCookBook : CookBook
                         ultArg.Vector4 = new Vector4(arg._X, arg._Y, arg._Z, arg._W);
                         break;
                     case (PersistentArgumentTypeExt.Quaternion):
-                        ultArg.Quaterion = Quaternion.Euler(arg._X, arg._Y, arg._Z);
+                        ultArg.Quaternion = Quaternion.Euler(arg._X, arg._Y, arg._Z);
                         break;
                     case (PersistentArgumentTypeExt.Color):
                         ultArg.Color = new Color(arg._X, arg._Y, arg._Z, arg._W);
