@@ -56,11 +56,11 @@ public class CustomNodeDef : ScriptableObject
     {
         foreach(var pin in inputPins)
         {
-            pin.FixType()
+            pin.FixType();
         }
         foreach(var pin2 in outputPins)
         {
-            pin2.FixType()
+            pin2.FixType();
         }
     }
 }
