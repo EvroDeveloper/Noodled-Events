@@ -47,7 +47,7 @@ public struct SerializablePinData
         Flow,
         Object,
     }
-    public string pinName = New Pin;
+    public string pinName = "New Pin";
     public PinType pinType;
     public string objectType;
     public int persistentCallForReturn = 0;
