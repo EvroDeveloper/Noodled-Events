@@ -6,6 +6,7 @@ using UnityEditor;
 using System.Collections;
 using System.Collections.Generic;
 using System;
+using static NoodledEvents.CookBook.NodeDef;
 
 public class CustomNodesCookBook : CookBook
 {
@@ -20,7 +21,7 @@ public class CustomNodesCookBook : CookBook
 
         foreach(var guid in customNodeGuids)
         {
-            CustomNodeDef customNode = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid));
+            CustomNodeDef customNode = AssetDatabase.LoadAssetAtPath<CustomNodeDef>(AssetDatabase.GUIDToAssetPath(guid));
             if(bookTagToNodeDef.ContainsKey(customNode.bookTag))
             {
                 Debug.LogWarning($"[Noodled Events] Could not add custom node {customNode.nodeName}: Book Tag already exists", customNode);
@@ -43,7 +44,7 @@ public class CustomNodesCookBook : CookBook
 
     public override void CompileNode(UltEventBase evt, SerializedNode node, Transform dataRoot)
     {
-        base.CompileNode();
+        base.CompileNode(evt, node, dataRoot);
     }
 }
 #endif
