@@ -53,7 +53,8 @@ public class CustomNodeDef : ScriptableObject
         return output.ToArray();
     }
 
-    void OnValidate()
+    [ContextMenu("Validate Pin Types")]
+    public void ValidatePinTypes()
     {
         foreach(var pin in inputPins)
         {
