@@ -1,0 +1,44 @@
+#if UNITY_EDITOR
+using UnityEngine;
+using System;
+
+public class CustomNodesCookBook : CookBook
+{
+    public Dictionary<string, CustomNodeDef> bookTagToNodeDef = new();
+    
+    public override void CollectDefs(Action<IEnumerable<NodeDef>, float> progressCallback, Action completedCallback)
+    {
+        bookTagToNodeDef.Clear();
+        List<NodeDef> allDefs = new();
+
+        string[] customNodeGuids = AssetDatabase.FindAssets("t:CustomNodeDef", null);
+
+        foreach(var guid in customNodeGuids)
+        {
+            CustomNodeDef customNode = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid));
+            if(bookTagToNodeDef.ContainsKey(customNode.bookTag))
+            {
+                Debug.LogWarning($"[Noodled Events] Could not add custom node {customNode.nodeName}: Book Tag already exists", customNode);
+                continue;
+            }
+            bookTagToNodeDef.Add($"custom.{customNode.bookTag}", customNode);
+            
+            Pin[] inputPins = customNode.GetInputPins();
+            Pin[] outputPins = customNode.GetOutputPins();
+            
+            allDefs.Add(new NodeDef(this, $"custom.{customNode.nodeName}",
+                inputs: () => inputPins,
+                outputs: () => outputPins,
+                bookTag: $"custom.{customNode.bookTag}"));
+        }
+
+        progressCallback.Invoke(allDefs, 1);
+        completedCallback.Invoke();
+    }
+
+    public override void CompileNode(UltEventBase evt, SerializedNode node, Transform dataRoot)
+    {
+        base.CompileNode();
+    }
+}
+#endif
