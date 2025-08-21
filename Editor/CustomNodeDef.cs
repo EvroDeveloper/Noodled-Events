@@ -100,6 +100,11 @@ public class SerializablePinData
         if(pinType == PinType.Flow) return;
 
         objectType = objectType.Trim();
+        if (TypeTranslator.SimpleNames2Types.TryGetValue(objectType.ToLower(), out Type v))
+        {
+            objectType = string.Join(',', v.AssemblyQualifiedName.Split(',').Take(2));
+            return;
+        }
         foreach (Type t in UltNoodleEditor.SearchableTypes)
         {
             if (string.Compare(t.Name, objectType, StringComparison.CurrentCultureIgnoreCase) == 0)
