@@ -11,7 +11,7 @@ using static NoodledEvents.CookBook.NodeDef.Pin;
 [CreateAssetMenu(fileName = "New Custom Node", menuName = "NoodleEvents/Custom Node", order = 1)]
 public class CustomNodeDef : ScriptableObject
 {
-    public string namespace = "custom";
+    public string _namespace = "custom";
     public string nodeName;
     public string bookTag;
     public SerializablePinData[] inputPins = new[] { new SerializablePinData() { pinName = "Exec" } };

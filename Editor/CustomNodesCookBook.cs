@@ -27,15 +27,15 @@ public class CustomNodesCookBook : CookBook
                 Debug.LogWarning($"[Noodled Events] Could not add custom node {customNode.nodeName}: Book Tag already exists", customNode);
                 continue;
             }
-            bookTagToNodeDef.Add($"{customNode.namespace}.{customNode.bookTag}", customNode);
+            bookTagToNodeDef.Add($"{customNode._namespace}.{customNode.bookTag}", customNode);
             
             Pin[] inputPins = customNode.GetInputPins();
             Pin[] outputPins = customNode.GetOutputPins();
             
-            allDefs.Add(new NodeDef(this, $"{customNode.namespace}.{customNode.nodeName}",
+            allDefs.Add(new NodeDef(this, $"{customNode._namespace}.{customNode.nodeName}",
                 inputs: () => inputPins,
                 outputs: () => outputPins,
-                bookTag: $"{customNode.namespace}.{customNode.bookTag}"));
+                bookTag: $"{customNode._namespace}.{customNode.bookTag}"));
         }
 
         progressCallback.Invoke(allDefs, 1);
