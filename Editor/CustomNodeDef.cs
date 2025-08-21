@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEditor;
 using static NoodledEvents.CookBook.NodeDef;
 
-[CreateAssetMenu(fileName: "New Custom Node", menuName: "NoodleEvents/Custom Node", order: 1)]
+[CreateAssetMenu(fileName = "New Custom Node", menuName = "NoodleEvents/Custom Node", order = 1)]
 public class CustomNodeDef : ScriptableObject
 {
     public string nodeName;
