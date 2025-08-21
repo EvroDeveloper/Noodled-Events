@@ -4,6 +4,7 @@ using NoodledEvents;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using static NoodledEvents.CookBook.NodeDef;
 using static NoodledEvents.CookBook.NodeDef.Pin;
@@ -44,12 +45,12 @@ public class CustomNodeDef : ScriptableObject
         List<SerializablePinData> output = new();
         foreach(SerializablePinData pin in outputPins)
         {
-            if(pin.pinType == PinType.Object)
+            if(pin.pinType == SerializablePinData.PinType.Object)
             {
                 output.Add(pin);
             }
         }
-        return output;
+        return output.ToArray();
     }
 
     void OnValidate()
@@ -105,7 +106,7 @@ public struct SerializablePinData
         }
         foreach (Type t in UltNoodleEditor.SearchableTypes)
         {
-            if (string.Compare(t.Name, tf.value, StringComparison.CurrentCultureIgnoreCase) == 0)
+            if (string.Compare(t.Name, objectType, StringComparison.CurrentCultureIgnoreCase) == 0)
             {
                 objectType = string.Join(',', t.AssemblyQualifiedName.Split(',').Take(2));
                 return;

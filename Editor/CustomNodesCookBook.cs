@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using static NoodledEvents.CookBook.NodeDef;
+using static SerializablePersistentArgumentExt.PersistentArgumentTypeExt;
 
 public class CustomNodesCookBook : CookBook
 {
@@ -129,7 +130,7 @@ public class CustomNodesCookBook : CookBook
                 }
             }
             
-            evt.PersistentCalls.Add(ultCall);
+            evt.PersistentCallsList.Add(ultCall);
         }
 
         var nextNode = node.FlowOutputs[0].Target?.Node;
