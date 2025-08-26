@@ -10,22 +10,35 @@ using static NoodledEvents.CookBook.NodeDef;
 using static NoodledEvents.CookBook.NodeDef.Pin;
 
 [CreateAssetMenu(fileName = "New Custom Node", menuName = "NoodleEvents/Custom Node", order = 1)]
-public class CustomNodeDef : ScriptableObject
+public class CustomNodeDef : ScriptableObject, ISerializationCallbackReceiver
 {
     public string _namespace = "custom";
     public string nodeName;
     public string bookTag;
+
+    public SerializableFlowInputPin[] flowInputs = new[] { new SerializableFlowInputPin() { pinName = "Exec" } };
+    public SerializableDataInputPin[] dataInputs = new[];
+
+    public SerializableFlowOutputPin[] flowInputs = new[] { new SerializableFlowOutputPin() { pinName = "Done" } };
+    public SerializableDataOutputPin[] dataOutputs = new[];
+
     public SerializablePinData[] inputPins = new[] { new SerializablePinData() { pinName = "Exec" } };
     public SerializablePinData[] outputPins = new[] { new SerializablePinData() { pinName = "Done" } };
 
     public SerializablePersistentCallExt[] persistentCalls;
 
+    public SerializedNode[] NodeDatas;
+
     public Pin[] GetInputPins()
     {
         List<Pin> output = new();
-        foreach(var pin in inputPins)
+        foreach(var flowPin in flowInputs)
         {
-            output.Add(pin.ToPin());
+            output.Add(flowPin.ToPin());
+        }
+        foreach(var dataPin in dataInputs)
+        {
+            output.Add(dataPin.ToPin());
         }
         return output.ToArray();
     }
@@ -33,22 +46,13 @@ public class CustomNodeDef : ScriptableObject
     public Pin[] GetOutputPins()
     {
         List<Pin> output = new();
-        foreach(var pin in outputPins)
+        foreach(var flowPin in flowOutputs)
         {
-            output.Add(pin.ToPin());
+            output.Add(flowPin.ToPin());
         }
-        return output.ToArray();
-    }
-
-    public SerializablePinData[] GetDataOutputs()
-    {
-        List<SerializablePinData> output = new();
-        foreach(SerializablePinData pin in outputPins)
+        foreach(var outputPin in dataOutputs)
         {
-            if(pin.pinType == SerializablePinData.PinType.Object)
-            {
-                output.Add(pin);
-            }
+            output.Add(outputPin.ToPin());
         }
         return output.ToArray();
     }
@@ -56,49 +60,55 @@ public class CustomNodeDef : ScriptableObject
     [ContextMenu("Validate Pin Types")]
     public void ValidatePinTypes()
     {
-        foreach(var pin in inputPins)
+        foreach(var pin in dataInputs)
         {
             pin.FixType();
         }
-        foreach(var pin2 in outputPins)
+        foreach(var pin2 in dataOutputs)
         {
             pin2.FixType();
         }
     }
+
+    public void OnBeforeSerialize()
+    {
+
+    }
+
+    public void OnAfterDeserialize()
+    {
+        foreach (var node in NodeDatas)
+            node.Bowl = this;
+    }
 }
 
 [Serializable]
-public class SerializablePinData
+public class SerializableFlowInputPin : SerializablePinData
 {
-    public enum PinType
-    {
-        Flow,
-        Object,
-    }
-    public string pinName;
-    public PinType pinType;
-    public string objectType;
-    public int persistentCallForReturn;
+    public NoodleFlowOutput FlowInOutput;    
+}
 
-    public Pin ToPin()
+[Serializable]
+public class SerializableFlowOutputPin : SerializablePinData
+{
+    public NoodleFlowOutput FlowOutInput;
+}
+
+[Serializable]
+public class SerializableDataInputPin : SerializablePinData
+{
+    public NoodleDataOutput DataInOutput;
+
+    public string objectType;
+
+    public override Pin ToPin()
     {
-        if(pinType == PinType.Flow)
-        {
-            return new Pin(pinName);
-        }
-        else if (pinType == PinType.Object)
-        {
-            Type pinObjType = Type.GetType(objectType);
-            Debug.Log(pinObjType == null);
-            return new Pin(pinName, pinObjType);
-        }
-        return null;
+        Type pinObjType = Type.GetType(objectType);
+        return new Pin(pinName, pinObjType);
     }
 
     public void FixType()
     {
-        if(pinType == PinType.Flow) return;
-
         objectType = objectType.Trim();
         if (TypeTranslator.SimpleNames2Types.TryGetValue(objectType.ToLower(), out Type v))
         {
@@ -113,6 +123,51 @@ public class SerializablePinData
                 return;
             }
         }
+    }
+}
+
+[Serializable]
+public class SerializableDataOutputPin : SerializablePinData
+{
+    public NoodleDataInput DataOutInput;
+
+    public string objectType;
+
+    public int persistentCallForReturn;
+
+    public override Pin ToPin()
+    {
+        Type pinObjType = Type.GetType(objectType);
+        return new Pin(pinName, pinObjType);
+    }
+
+    public void FixType()
+    {
+        objectType = objectType.Trim();
+        if (TypeTranslator.SimpleNames2Types.TryGetValue(objectType.ToLower(), out Type v))
+        {
+            objectType = string.Join(',', v.AssemblyQualifiedName.Split(',').Take(2));
+            return;
+        }
+        foreach (Type t in UltNoodleEditor.SearchableTypes)
+        {
+            if (string.Compare(t.Name, objectType, StringComparison.CurrentCultureIgnoreCase) == 0)
+            {
+                objectType = string.Join(',', t.AssemblyQualifiedName.Split(',').Take(2));
+                return;
+            }
+        }
+    }
+}
+
+[Serializable]
+public class SerializablePinData
+{
+    public string pinName;
+
+    public virtual void OnAfterDeserialize()
+    {
+
     }
 }
 

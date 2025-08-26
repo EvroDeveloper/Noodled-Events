@@ -83,6 +83,7 @@ namespace NoodledEvents
                 Position += new Vector2((DataOutputs.OrderBy(d => d.Name.Length).First().Name.Length - 4) * 10, 0);
         }
         [NonSerialized] public SerializedBowl Bowl;
+        [NonSerialized] public CustomNodeDef CustomNode;
         [SerializeField] public string Name;
 
         public void Update() // idk lol
@@ -208,12 +209,22 @@ namespace NoodledEvents
             // then resolve Node Connection refs
             foreach (var fi in FlowInputs)
             {
-                // find outputs that touch this input
-                fi.Sources = Bowl.NodeDatas.SelectMany(n => n.FlowOutputs).Where(fo => fi.SourcesIds.Contains(fo.ID)).ToList();
+                if(CustomNode != null)
+                {
+                    fi.Sources = CustomNode.NodeDatas.SelectMany(n => n.FlowOutputs).Where(fo => fi.SourcesIds.Contains(fo.ID)).ToList();
 
-                // tell the output they're touching this input
-                foreach (var output in fi.Sources)
-                    output.Target = fi;
+                    foreach (var output in fi.Sources)
+                        output.Target = fi;
+                }
+                else
+                {
+                    // find outputs that touch this input
+                    fi.Sources = Bowl.NodeDatas.SelectMany(n => n.FlowOutputs).Where(fo => fi.SourcesIds.Contains(fo.ID)).ToList();
+
+                    // tell the output they're touching this input
+                    foreach (var output in fi.Sources)
+                        output.Target = fi;
+                }
             }
 
             foreach (var dout in DataOutputs)
