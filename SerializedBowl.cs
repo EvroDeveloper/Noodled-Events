@@ -1,5 +1,4 @@
 ﻿#if UNITY_EDITOR
-using Grpc.Core.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -105,6 +104,7 @@ namespace NoodledEvents
         public SerializedNode EntryNode => NodeDatas[0];
         [SerializeField] public List<SerializedNode> NodeDatas = new(); // this list is "compiled" into the targ event.
         [SerializeField] public GameObject LastGenerated;
+        [SerializeField] public List<UltNoodleNoteData> NoteDatas = new();
 
         [NonSerialized] public SerializedNode ErroredNode;
         /// <summary>
