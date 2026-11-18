@@ -249,6 +249,8 @@ public class UltNoodleEditor : EditorWindow
                 if (LoadingText.text.EndsWith(", "))
                     LoadingText.text = LoadingText.text[..^2];
                 LoadingText.text += $"] | {AllNodeDefs.Count} Nodes Available.";
+                
+                NodeSearchIndex.IndexNodes(newNodes);
             }),
             () => MainThread.Enqueue(() =>
             {
