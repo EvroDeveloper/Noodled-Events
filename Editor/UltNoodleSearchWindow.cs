@@ -8,6 +8,135 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+public static class NodeSearchIndex
+{
+    public class NodeSearchResult : IComparable<NodeSearchResult>
+    {
+        public CookBook.NodeDef nodeDef;
+        public int keywordsMatched;
+
+        public NodeSearchResult(CookBook.NodeDef node)
+        {
+            nodeDef = node;
+            keywordsMatched = 0;
+        }
+
+        public int CompareTo(NodeSearchResult other)
+        {
+            return keywordsMatched - other.keywordsMatched;
+        }
+    }
+
+    private static Dictionary<string, HashSet<CookBook.NodeDef>> _index = new();
+
+    public static void IndexNode(CookBook.NodeDef nodeDef)
+    {
+        //TEMPORARY KEYWORD STUFF PLEASE REWORK LATER
+        List<string> nodeKeywords = SplitSeachToIndex(nodeDef.Name).ToList();
+
+        foreach(string keyword in nodeKeywords)
+        {
+            for(int i = 1; i <= keyword.Length; i++)
+            {
+                string subKeyword = keyword.Substring(0, i);
+                if(!_index.ContainsKey(subKeyword)) _index.Add(subKeyword, new HashSet<CookBook.NodeDef>());
+                _index[subKeyword].Add(nodeDef);
+            }
+        }
+    }
+
+    public static void IndexNodes(IEnumerable<CookBook.NodeDef> nodes)
+    {
+        foreach(CookBook.NodeDef node in nodes)
+        {
+            IndexNode(node);
+        }
+    }
+
+    private static string[] SplitSeachToIndex(string search)
+    {
+        char[] separators = new char[] {' ', '.', ',', '_'};
+        string[] splits = search.ToLower().Split(separators, StringSplitOptions.RemoveEmptyEntries);
+        return splits.Append(search).ToArray();
+    }
+
+    public static CookBook.NodeDef[] SearchNodes(string search)
+    {
+        Dictionary<CookBook.NodeDef, int> nodeSearch = GetNodes(search);
+        return Sort(nodeSearch);
+    }
+
+    private static CookBook.NodeDef[] Sort(Dictionary<CookBook.NodeDef, int> nodeSearch)
+    {
+        return nodeSearch.OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key).ToArray();
+    }
+
+    public static Dictionary<CookBook.NodeDef, int> GetNodes(string search)
+    {
+        string[] splitIndex = SplitSeachToIndex(search);
+        Dictionary<CookBook.NodeDef, int> attempts = new();
+        List<string> intersectIndexes = new();
+        foreach(string index in splitIndex)
+        {
+            if(_index.ContainsKey(index))
+            {
+                HashSet<CookBook.NodeDef> indexedNodes = _index[index];
+
+                bool onlyPrioritize = false;
+                if(indexedNodes.Count >= 1000)
+                {
+                    onlyPrioritize = true;
+                }
+
+                foreach(CookBook.NodeDef node in indexedNodes)
+                {
+                    if(onlyPrioritize)
+                    {
+                        if(attempts.ContainsKey(node)) attempts[node] = attempts[node] + 1;
+                    }
+                    else
+                    {
+                        if(!attempts.ContainsKey(node)) attempts.Add(node, 0);
+                        attempts[node] = attempts[node] + 1;
+                    }
+                }
+            }
+        }
+        List<CookBook.NodeDef> onesToRemove = new();
+        foreach(string keyword in intersectIndexes)
+        {
+            if(_index.ContainsKey(keyword))
+            {
+                foreach(CookBook.NodeDef nodeDef in attempts.Keys)
+                {
+                    if(!_index[keyword].Contains(nodeDef)) onesToRemove.Add(nodeDef);
+                }
+            }
+        }
+        foreach(var one in onesToRemove)
+        {
+            attempts.Remove(one);
+        }
+        return attempts;
+    }
+
+    public static Dictionary<CookBook.NodeDef, int> GetNodes(string search, string[] requiredKeywords)
+    {
+        Dictionary<CookBook.NodeDef, int> allMatchingSearch = GetNodes(search);
+        foreach(string keyword in requiredKeywords)
+        {
+            if(_index.ContainsKey(keyword))
+            {
+                foreach(CookBook.NodeDef nodeDef in allMatchingSearch.Keys)
+                {
+                    if(!_index[keyword].Contains(nodeDef)) allMatchingSearch.Remove(nodeDef);
+                }
+            }
+        }
+        return allMatchingSearch;
+    }
+}
+
 public class UltNoodleSearchWindow : EditorWindow
 {
     public static bool IsSearchOpen => _activeWindow != null;
@@ -23,7 +152,6 @@ public class UltNoodleSearchWindow : EditorWindow
     private Button _settingsButton;
     private VisualElement _settingsMenu;
 
-    private int _curSearchProcess = 0;
     private Vector2 _pendingScreenPos;
 
     private List<CookBook.NodeDef> FilteredNodeDefs = new();
@@ -252,85 +380,27 @@ public class UltNoodleSearchWindow : EditorWindow
 
     private void SearchTypes(int findNum)
     {
-        EditorApplication.CallbackFunction newSearch = null;
-        _curSearchProcess++;
-        int thisSearchNum = _curSearchProcess;
-        int dispNum = findNum;
         _searchedTypes.Clear();
         string targetSearch = _searchBar.value;
-        string[] splitResults = null;
-        int j = 0;
-        bool firstRun = true;
-        if (!targetSearch.StartsWith(".") && targetSearch.Contains("."))
+
+        if(string.IsNullOrEmpty(targetSearch))
         {
-            splitResults = targetSearch.Split('.');
-            targetSearch = splitResults[0] + ".";
+            for(int i = 0; i < findNum; i++)
+            {
+                _searchedTypes.Add(FilteredNodeDefs[i].SearchItem);
+            }
         }
-
-        // To be replaced with some better comparison algorithm.
-        bool CompareString(string stringOne, string stringTwo)
+        else
         {
-            return stringOne.Contains(stringTwo, StringComparison.CurrentCultureIgnoreCase);
+            var nodes = NodeSearchIndex.SearchNodes(targetSearch);
+            int found = 0;
+            foreach (CookBook.NodeDef node in nodes)
+            {
+                if(found > findNum) break;
+                _searchedTypes.Add(node.SearchItem);
+                found++;
+            }
         }
-
-        void EndSearch()
-        {
-            _searchText.style.display = DisplayStyle.None;
-            EditorApplication.update -= newSearch;
-        }
-
-        newSearch = () =>
-        {
-            if (_curSearchProcess != thisSearchNum)
-            {
-                EndSearch();
-                return;
-            }
-            if (firstRun)
-            {
-                firstRun = false;
-                _searchText.style.display = DisplayStyle.Flex;
-            }
-
-            // Collect first x that match
-            int i = 0;
-            for (; j < FilteredNodeDefs.Count; j++)
-            {
-                CookBook.NodeDef nd = FilteredNodeDefs[j];
-                i++;
-                _searchText.text = "(" + Mathf.RoundToInt(Mathf.Clamp(j * 100 / (float)FilteredNodeDefs.Count, 0, 100)) + "%)";
-
-                if (i > 1000)
-                    break; // next loop pls
-
-                if (dispNum <= 0)
-                {
-                    _searchedTypes.Add(GetIncompleteListDisplay());
-                    EndSearch();
-                    return;
-                }
-
-                if (BookFilters.ContainsKey(nd.CookBook.GetType()) && !BookFilters[nd.CookBook.GetType()]) continue;
-
-                // Primary filter, either strict startswith or loose compare
-                if (nd.Name.StartsWith(targetSearch, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    // Secondary filter, second part compare check
-                    if ((splitResults != null) && !CompareString(nd.Name, splitResults[1]))
-                        continue;
-
-                    dispNum--;
-                    _searchedTypes.Add(nd.SearchItem);
-                }
-            }
-
-            if (j >= FilteredNodeDefs.Count - 1)
-            {
-                EndSearch();
-            }
-        };
-        EditorApplication.update += newSearch;
-        newSearch.Invoke();
     }
     
     private VisualElement GetIncompleteListDisplay()
